@@ -26,7 +26,7 @@ public class Client {
     }
 
     public String run() throws IOException, InterruptedException {
-        Message msg = new Message((byte)1, hash, originalLength, "", "");
+        Message msg = new Message("     <insert-team-name-here>    ",(byte)1, hash, originalLength, "", "");
         socket.setBroadcast(true);
         byte[] buffer = msg.getBytes();
         DatagramPacket broadcastPacket = new DatagramPacket(buffer, buffer.length, addressBroadcast, serverPort);
