@@ -45,9 +45,11 @@ public class Message {
         originalStringEnd = new String(Arrays.copyOfRange(messageAsBytes, 74+originalLength, 74+2*originalLength - 1));
     }
 
-    public void changeMessageType(byte newType){
+    public void setType(byte newType){
         this.type = newType;
     }
+
+    public byte getType() { return type; }
 
     public byte[] getBytes() {
         String s = "";
@@ -58,4 +60,5 @@ public class Message {
         s += originalStringStart + '\0' + originalStringEnd;
         return s.getBytes();
     }
+
 }
