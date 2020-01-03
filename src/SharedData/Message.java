@@ -45,37 +45,31 @@ public class Message {
         originalStringEnd = new String(Arrays.copyOfRange(messageAsBytes, 74+originalLength, 74+2*originalLength - 1));
     }
 
-    public void setType(byte newType){
-        this.type = newType;
+    public String getHash() {
+        return hash;
     }
 
     public byte getType() { return type; }
+    public void setType(byte newType){
+        this.type = newType;
+    }
 
     public void setTeamName(String teamName) {
         this.teamName = teamName;
     }
 
-    public void setOriginalStringStart(String originalStringStart) {
-        this.originalStringStart = originalStringStart;
-    }
-
-    public String getHash() {
-        return hash;
-    }
-
     public String getOriginalStringStart() {
         return originalStringStart;
     }
-
-    public String getOriginalStringEnd() {
-        return originalStringEnd;
+    public void setOriginalStringStart(String originalStringStart) {
+        this.originalStringStart = originalStringStart;
     }
 
     public byte[] getBytes() {
         String s = "";
         s += teamName;
         s += (char)type;
-        s += hash.toString();
+        s += hash;
         s += (int)originalLength;
         s += originalStringStart + '\0' + originalStringEnd;
         return s.getBytes();

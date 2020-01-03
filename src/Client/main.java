@@ -6,7 +6,6 @@ import java.net.SocketException;
 import java. util. Scanner;
 
 public class main {
-
     public static void main(String[] args) throws IOException, InterruptedException {
         Scanner in = new Scanner(System. in);
         System.out.println("Welcome to " + Message.ourTeamName +". Please enter the hash:");

@@ -15,7 +15,8 @@ public class Client {
     private String hash;  //hash length is 40 chars
     private byte originalLength;
     private List<InetAddress> addresses;  //all servers are on same port, so saving just this address
-    private int waitForServers = 1000*10; //the time that the client will wait for acks
+    private int waitForServers = 1000*15; //the time that the client will wait for acks
+    private String answer = "Not Found"; //cant be local variable, needs to be field because used inside lambda of thread
 
     public Client(String hash, byte originalLength) throws UnknownHostException {
         try {
@@ -25,6 +26,7 @@ public class Client {
         }
         this.hash = hash;
         this.originalLength = originalLength;
+        this.addresses = new LinkedList<>();
     }
 
     public String run() throws IOException, InterruptedException {
@@ -56,29 +58,44 @@ public class Client {
             }
         }
         socket.setBroadcast(false);
-
         //send requests to servers
-        for (InetAddress address : addresses) {
-            String start = "";
-            String end = "";
+        if (addresses.size()==0)
+            return answer;
+        String[] stringsToCheck = divideToDomains(originalLength, addresses.size());
+        for (int i=0 ;i<stringsToCheck.length; i++) {
+            InetAddress address = addresses.get(i);
+            String start = stringsToCheck[i];
+            String end = stringsToCheck[i+1];
             Message requestMsg = new Message(Message.ourTeamName, Message.request, hash, originalLength, start, end);
             byte[] requestBytes = requestMsg.getBytes();
             DatagramPacket request = new DatagramPacket(requestBytes, requestBytes.length, address,serverPort);
             socket.send(request);
         }
         //wait for one ack/all nack
-        String answer = "Not Found";
-        boolean acked = false;
-        while(!acked && !addresses.isEmpty()) {
-            byte[] bufAck = new byte[bufferSize];
-            DatagramPacket serverAnswer = new DatagramPacket(bufAck, bufferSize);
-            socket.receive(serverAnswer);
-            Message serverAnswerMsg = new Message(serverAnswer.getData());
-            if (serverAnswerMsg.getType() == Message.acknowledge){
-                answer = serverAnswerMsg.getOriginalStringStart();
-                acked = true;
+        Thread waitForServersAcks = new Thread(() ->
+        {
+            int nacks = 0;
+            while(nacks<addresses.size()) {
+                byte[] bufAck = new byte[bufferSize];
+                DatagramPacket serverAnswer = new DatagramPacket(bufAck, bufferSize);
+                try {
+                    socket.receive(serverAnswer);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                Message serverAnswerMsg = new Message(serverAnswer.getData());
+                byte serverAnswerMsgType = serverAnswerMsg.getType();
+                if (serverAnswerMsgType == Message.acknowledge){
+                    answer = serverAnswerMsg.getOriginalStringStart();  //contains the original input string
+                    break;
+                }
+                if (serverAnswerMsgType == Message.negative_acknowledge) {
+                    nacks++;
+                }
             }
-        }
+        });
+        waitForServersAcks.join(waitForServers);
+        waitForServersAcks.interrupt();  //time is over
         return answer;
     }
 
@@ -86,7 +103,7 @@ public class Client {
     //jobs look like: result[0] till result[1] is the first range
     //                result[2] till result[3] is the second range
     //                and so on...
-    public String [] divideToDomains (int stringLength, int numOfServers){
+    private String [] divideToDomains (int stringLength, int numOfServers){
         String [] domains = new String[numOfServers * 2];
 
         StringBuilder first = new StringBuilder(); //aaa
