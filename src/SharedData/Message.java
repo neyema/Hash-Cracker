@@ -9,15 +9,16 @@ public class Message {
     public static final byte request = 3;
     public static final byte acknowledge = 4;
     public static final byte negative_acknowledge = 5;
+    public static final String ourTeamName = "       <insert-team-name>       ";
     private String teamName;   //32 bytes.there can be other messages with other teamName
     private byte type;
-    private char[] hash;  //hash length is 40 chars
+    private String hash;  //hash length is 40 chars
     private byte originalLength;
     private String originalStringStart;
     private String originalStringEnd;
 
 
-    public Message(String teamName,byte type, char[] hash, byte originalLength, String originalStringStart, String originalStringEnd) {
+    public Message(String teamName,byte type, String hash, byte originalLength, String originalStringStart, String originalStringEnd) {
         this.teamName = teamName;
         this.type = type;
         this.hash = hash;
@@ -38,8 +39,7 @@ public class Message {
     public Message(byte[] messageAsBytes){
         teamName = new String(Arrays.copyOfRange(messageAsBytes, 0, 31));
         type = messageAsBytes[32];
-        String hashAsString = new String(Arrays.copyOfRange(messageAsBytes, 33, 72));
-        hash = hashAsString.toCharArray();
+        hash = new String(Arrays.copyOfRange(messageAsBytes, 33, 72));
         originalLength = messageAsBytes[73];
         originalStringStart = new String(Arrays.copyOfRange(messageAsBytes, 74, 74+originalLength - 1));
         originalStringEnd = new String(Arrays.copyOfRange(messageAsBytes, 74+originalLength, 74+2*originalLength - 1));
@@ -50,6 +50,26 @@ public class Message {
     }
 
     public byte getType() { return type; }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
+    }
+
+    public void setOriginalStringStart(String originalStringStart) {
+        this.originalStringStart = originalStringStart;
+    }
+
+    public String getHash() {
+        return hash;
+    }
+
+    public String getOriginalStringStart() {
+        return originalStringStart;
+    }
+
+    public String getOriginalStringEnd() {
+        return originalStringEnd;
+    }
 
     public byte[] getBytes() {
         String s = "";
