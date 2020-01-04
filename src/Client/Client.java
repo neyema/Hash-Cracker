@@ -15,7 +15,7 @@ public class Client {
     private String hash;  //hash length is 40 chars
     private byte originalLength;
     private List<InetAddress> addresses;  //all servers are on same port, so saving just this address
-    private int waitForServers = 1000*15; //the time that the client will wait for acks
+    private int waitForServers = 100000*15; //the time that the client will wait for acks
     private String answer = "Not Found"; //cant be local variable, needs to be field because used inside lambda of thread
 
     public Client(String hash, byte originalLength) throws UnknownHostException {
@@ -35,13 +35,12 @@ public class Client {
         byte[] broadcastBytes = msg.getBytes();
         DatagramPacket broadcastPacket = new DatagramPacket(broadcastBytes, broadcastBytes.length, addressBroadcast, serverPort);
         socket.send(broadcastPacket);
+        socket.setBroadcast(false);
         //now waiting for offers from servers
-        double startListeningTime = System.currentTimeMillis();
         List<DatagramPacket> packets = new LinkedList<>();
-        byte[] buf = new byte[bufferSize];  //size of buffer of datagram packet (contains header&data)
-        DatagramPacket receivedPacket = new DatagramPacket(buf, bufferSize);
-
         Thread t = new Thread(() -> { while(true) {
+            byte[] buf = new byte[bufferSize];  //size of buffer of datagram packet (contains header&data)
+            DatagramPacket receivedPacket = new DatagramPacket(buf, bufferSize);
             try {
                 socket.receive(receivedPacket);
             } catch (IOException e) {
@@ -49,20 +48,24 @@ public class Client {
             }
             packets.add(receivedPacket); }
         });
+        t.start();
         t.join(1000);
         t.interrupt();
         for (DatagramPacket datagramPacket: packets){
             byte[] data = datagramPacket.getData();
-            if ((int)data[33] == Message.offer) {
+            if (data[32] == Message.offer) {
                 addresses.add(datagramPacket.getAddress());
             }
         }
-        socket.setBroadcast(false);
+
         //send requests to servers
+        socket = new DatagramSocket(0);//I'm not sure why, but if the socket not being initialized
+                                            //so when it tries to listen, it gets stuck
+                                            //seems like a dirty and ugly way to fix so need to see why it happens
         if (addresses.size()==0)
             return answer;
         String[] stringsToCheck = divideToDomains(originalLength, addresses.size());
-        for (int i=0 ;i<stringsToCheck.length; i++) {
+        for (int i=0 ;i<stringsToCheck.length; i=i+2) {
             InetAddress address = addresses.get(i);
             String start = stringsToCheck[i];
             String end = stringsToCheck[i+1];
@@ -94,6 +97,7 @@ public class Client {
                 }
             }
         });
+        waitForServersAcks.start();
         waitForServersAcks.join(waitForServers);
         waitForServersAcks.interrupt();  //time is over
         return answer;

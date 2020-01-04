@@ -36,12 +36,12 @@ public class Message {
     this function build the message from bytes
     */
     public Message(byte[] messageAsBytes){
-        teamName = new String(Arrays.copyOfRange(messageAsBytes, 0, 31));
+        teamName = new String(Arrays.copyOfRange(messageAsBytes, 0, 32));
         type = messageAsBytes[32];
-        hash = new String(Arrays.copyOfRange(messageAsBytes, 33, 72));
+        hash = new String(Arrays.copyOfRange(messageAsBytes, 33, 73));
         originalLength = messageAsBytes[73];
-        originalStringStart = new String(Arrays.copyOfRange(messageAsBytes, 74, 74+originalLength - 1));
-        originalStringEnd = new String(Arrays.copyOfRange(messageAsBytes, 74+originalLength, 74+2*originalLength - 1));
+        originalStringStart = new String(Arrays.copyOfRange(messageAsBytes, 74, 74+originalLength));
+        originalStringEnd = new String(Arrays.copyOfRange(messageAsBytes, 74+originalLength, 74+2*originalLength));
     }
 
     public String getHash() {
@@ -57,6 +57,10 @@ public class Message {
         this.teamName = teamName;
     }
 
+    public String getOriginalStringEnd() {
+        return originalStringEnd;
+    }
+
     public String getOriginalStringStart() {
         return originalStringStart;
     }
@@ -69,8 +73,9 @@ public class Message {
         s += teamName;
         s += (char)type;
         s += hash;
-        s += (int)originalLength;
-        s += originalStringStart + '\0' + originalStringEnd;
+        s += (char)originalLength;
+        s += originalStringStart;
+        s += originalStringEnd;
         return s.getBytes();
     }
 

@@ -39,26 +39,28 @@ public class Server {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        byte[] buf = new byte[1024];
-        DatagramPacket receivedPacket = new DatagramPacket(buf, 256);
+
         Thread t = new Thread(() -> {
             while (serverRunning) {
-            try {
-                listeningSocket.receive(receivedPacket);
-            } catch (IOException e) {
-                e.printStackTrace();
+                byte[] buf = new byte[1024];
+                DatagramPacket receivedPacket = new DatagramPacket(buf, 1024);
+                try {
+                    listeningSocket.receive(receivedPacket);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                switch (receivedPacket.getData()[32]) {
+                    case Message.discover://if it's a discover, we send to the client an offer message
+                        sendOfferMessage(receivedPacket);
+                        break;
+                    case Message.request://if it's a request, we make a new thread that try to brute force
+                        calculatingThreadPool.execute(new Thread(() -> bruteForce(receivedPacket)));
+                        break;
+                    default://if it's something else we do nothing.
+                }
             }
-            switch ((int) receivedPacket.getData()[33]) {
-                case Message.discover://if it's a discover, we send to the client an offer message
-                    sendOfferMessage(receivedPacket);
-                    break;
-                case Message.request://if it's a request, we make a new thread that try to brute force
-                    calculatingThreadPool.execute(new Thread(() -> bruteForce(receivedPacket)));
-                    break;
-                default://if it's something else we do nothing.
-            }
-        }
         });
+        t.start();
         try {
             mutexForRunFunctionToWait.acquire();//if we could acquire the mutex that means that the server need to shut down and we continue to next line to shut down it
         } catch (InterruptedException e) {
@@ -70,7 +72,7 @@ public class Server {
     //function will send ack or nack if it found the HashKey to the client either it found or didn't
     private void bruteForce(DatagramPacket requestPacket) {
         Message msg = new Message(requestPacket.getData());
-        String result = tryToFindHashKeyBetweenValues(msg.getHash(), msg.getOriginalStringStart(), msg.getOriginalStringStart());
+        String result = tryDeHash(msg.getOriginalStringStart(), msg.getOriginalStringEnd(),msg.getHash());
         if (!result.equals("")) {//means that we found the HashKey
             sendAck(requestPacket, result);
         } else {
@@ -101,13 +103,46 @@ public class Server {
 
     //function gets a range to find a hash key.
     //will return a string with the current key or will return empty string if not found
-    private String tryToFindHashKeyBetweenValues(String hash, String startString, String endString) {
-        for (String currentString = startString; startString.compareTo(endString) >= 0; currentString = incrementStringBy1(currentString)) {
-            if (hash(currentString).equals(hash)) {
+    private String tryDeHash(String startRange, String endRange, String originalHash){
+        int start = convertStringToInt(startRange);
+        int end = convertStringToInt(endRange);
+        int length = startRange.length();
+        for(int i = start; i <= end; i++){
+            String currentString = converxtIntToString(i, length);
+            String hash = hash(currentString);
+            if(originalHash.equals(hash)){
                 return currentString;
             }
         }
         return "";
+    }
+
+    private int convertStringToInt(String toConvert) {
+        char[] charArray = toConvert.toCharArray();
+        int num = 0;
+        for(char c : charArray){
+            if(c < 'a' || c > 'z'){
+                throw new RuntimeException();
+            }
+            num *= 26;
+            num += c - 'a';
+        }
+        return num;
+    }
+
+    private String converxtIntToString(int toConvert, int length) {
+        StringBuilder s = new StringBuilder(length);
+        while (toConvert > 0 ){
+            int c = toConvert % 26;
+            s.insert(0, (char) (c + 'a'));
+            toConvert /= 26;
+            length --;
+        }
+        while (length > 0){
+            s.insert(0, 'a');
+            length--;
+        }
+        return s.toString();
     }
 
     //function gets a string and hashing it to SHA-1
@@ -124,18 +159,6 @@ public class Server {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    //function gets a string and increment it by 1.
-    //for example: aabd -> aabe  , aaaz -> aaba
-    private String incrementStringBy1(String s) {
-        int length = s.length();
-        char c = s.charAt(length - 1);
-
-        if (c == 'z')
-            return length > 1 ? incrementStringBy1(s.substring(0, length - 1)) + 'a' : "aa";
-
-        return s.substring(0, length - 1) + ++c;
     }
 
     //function handles that 2 people won't send at the same time from the socket
@@ -156,7 +179,7 @@ public class Server {
         sendPacket(offerPacket);
     }
 
-    private void turnOffServer(){
+    public void turnOffServer() {
         mutex.release();
     }
 }
