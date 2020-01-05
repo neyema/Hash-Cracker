@@ -104,45 +104,13 @@ public class Server {
     //function gets a range to find a hash key.
     //will return a string with the current key or will return empty string if not found
     private String tryDeHash(String startRange, String endRange, String originalHash){
-        int start = convertStringToInt(startRange);
-        int end = convertStringToInt(endRange);
-        int length = startRange.length();
-        for(int i = start; i <= end; i++){
-            String currentString = converxtIntToString(i, length);
+        for(String currentString = startRange; currentString.compareTo(endRange) <= 0 && !currentString.equals(""); currentString = incrementString(currentString)){
             String hash = hash(currentString);
             if(originalHash.equals(hash)){
                 return currentString;
             }
         }
         return "";
-    }
-
-    private int convertStringToInt(String toConvert) {
-        char[] charArray = toConvert.toCharArray();
-        int num = 0;
-        for(char c : charArray){
-            if(c < 'a' || c > 'z'){
-                throw new RuntimeException();
-            }
-            num *= 26;
-            num += c - 'a';
-        }
-        return num;
-    }
-
-    private String converxtIntToString(int toConvert, int length) {
-        StringBuilder s = new StringBuilder(length);
-        while (toConvert > 0 ){
-            int c = toConvert % 26;
-            s.insert(0, (char) (c + 'a'));
-            toConvert /= 26;
-            length --;
-        }
-        while (length > 0){
-            s.insert(0, 'a');
-            length--;
-        }
-        return s.toString();
     }
 
     //function gets a string and hashing it to SHA-1
@@ -177,6 +145,20 @@ public class Server {
         byte[] buffer = msg.getBytes();
         DatagramPacket offerPacket = new DatagramPacket(buffer, buffer.length, packet.getAddress(), packet.getPort());
         sendPacket(offerPacket);
+    }
+
+    private String incrementString(String str){
+        StringBuilder strBuilder = new StringBuilder(str);
+        for (int i = str.length() - 1; i >= 0; i--) {
+            if(str.charAt(i) != 'z'){
+                strBuilder.setCharAt(i,(char)(str.charAt(i) + 1));
+                return strBuilder.toString();
+            }
+            else{
+                strBuilder.setCharAt(i,'a');
+            }
+        }
+        return "";
     }
 
     public void turnOffServer() {

@@ -40,8 +40,9 @@ public class Message {
         type = messageAsBytes[32];
         hash = new String(Arrays.copyOfRange(messageAsBytes, 33, 73));
         originalLength = messageAsBytes[73];
-        originalStringStart = new String(Arrays.copyOfRange(messageAsBytes, 74, 74+originalLength));
-        originalStringEnd = new String(Arrays.copyOfRange(messageAsBytes, 74+originalLength, 74+2*originalLength));
+        int lengthInInt = originalLength & 0xff;
+        originalStringStart = new String(Arrays.copyOfRange(messageAsBytes, 74, 74+lengthInInt));
+        originalStringEnd = new String(Arrays.copyOfRange(messageAsBytes, 74+lengthInInt, 74+2*lengthInInt));
     }
 
     public String getHash() {

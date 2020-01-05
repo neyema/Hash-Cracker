@@ -10,9 +10,6 @@ public class main {
     public static void main(String[] args) throws IOException, InterruptedException {
         test();
 
-
-
-
         Scanner in = new Scanner(System. in);
         System.out.println("Welcome to " + Message.ourTeamName +". Please enter the hash:");
         String hash = in.nextLine();

@@ -3,6 +3,9 @@ package Client;
 import SharedData.Message;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.net.*;
 import java.util.LinkedList;
 import java.util.List;
@@ -64,7 +67,7 @@ public class Client {
                                             //seems like a dirty and ugly way to fix so need to see why it happens
         if (addresses.size()==0)
             return answer;
-        String[] stringsToCheck = divideToDomains(originalLength, addresses.size());
+        String[] stringsToCheck = divideToDomains(originalLength & 0xff, addresses.size());
         for (int i=0 ;i<stringsToCheck.length; i=i+2) {
             InetAddress address = addresses.get(i);
             String start = stringsToCheck[i];
@@ -107,7 +110,7 @@ public class Client {
     //jobs look like: result[0] till result[1] is the first range
     //                result[2] till result[3] is the second range
     //                and so on...
-    private String [] divideToDomains (int stringLength, int numOfServers){
+    private String[] divideToDomains (int stringLength, int numOfServers){
         String [] domains = new String[numOfServers * 2];
 
         StringBuilder first = new StringBuilder(); //aaa
@@ -118,42 +121,42 @@ public class Client {
             last.append("z"); //zzz
         }
 
-        int total = convertStringToInt(last.toString());
-        int perServer = (int) Math.floor (((double)total) /  ((double)numOfServers));
+        BigDecimal total = convertStringToInt(last.toString());
+        BigDecimal perServer = total.divide(new BigDecimal(numOfServers),0,RoundingMode.FLOOR);
 
         domains[0] = first.toString(); //aaa
         domains[domains.length -1 ] = last.toString(); //zzz
-        int summer = 0;
+        BigDecimal summer = new BigDecimal(0);
 
         for(int i = 1; i <= domains.length -2; i += 2){
-            summer += perServer;
-            domains[i] = converxtIntToString(summer, stringLength); //end domain of server
-            summer++;
-            domains[i + 1] = converxtIntToString(summer, stringLength); //start domain of next server
+            summer = summer.add(perServer);
+            domains[i] = converxtIntToString(summer.toBigInteger(), stringLength); //end domain of server
+            summer = summer.add(new BigDecimal(1));
+            domains[i + 1] = converxtIntToString(summer.toBigInteger(), stringLength); //start domain of next server
         }
 
         return domains;
     }
 
-    private int convertStringToInt(String toConvert) {
+    private BigDecimal convertStringToInt(String toConvert) {
         char[] charArray = toConvert.toCharArray();
-        int num = 0;
+        BigDecimal num = new BigDecimal(0);
         for(char c : charArray){
             if(c < 'a' || c > 'z'){
                 throw new RuntimeException();
             }
-            num *= 26;
-            num += c - 'a';
+            num = num.multiply(new BigDecimal(26));
+            num = num.add(new BigDecimal((c- 'a')));
         }
         return num;
     }
 
-    private String converxtIntToString(int toConvert, int length) {
+    private String converxtIntToString(BigInteger toConvert, int length) {
         StringBuilder s = new StringBuilder(length);
-        while (toConvert > 0 ){
-            int c = toConvert % 26;
+        while (toConvert.signum() == 1){//if it's positive it means it's bigger than zero
+            int c = toConvert.mod(new BigInteger("26")).intValue();
             s.insert(0, (char) (c + 'a'));
-            toConvert /= 26;
+            toConvert = toConvert.divide(new BigInteger("26"));
             length --;
         }
         while (length > 0){
