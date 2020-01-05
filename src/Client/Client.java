@@ -18,7 +18,7 @@ public class Client {
     private String hash;  //hash length is 40 chars
     private byte originalLength;
     private List<InetAddress> addresses;  //all servers are on same port, so saving just this address
-    private int waitForServers = 100000*15; //the time that the client will wait for acks
+    private int waitForServers = 1000*15; //the time that the client will wait for acks
     private String answer = "Not Found"; //cant be local variable, needs to be field because used inside lambda of thread
 
     public Client(String hash, byte originalLength) throws UnknownHostException {
