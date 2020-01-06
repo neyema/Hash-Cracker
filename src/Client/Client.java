@@ -15,13 +15,14 @@ import static java.lang.Thread.interrupted;
 
 public class Client {
     private final InetAddress addressBroadcast = InetAddress.getByName("255.255.255.255");
+    //private final InetAddress addressBroadcast = InetAddress.getByName("132.73.195.221");
     private final int serverPort = 3117;
     private final int bufferSize = 1024;
     private DatagramSocket socket;
     private String hash;  //hash length is 40 chars
     private byte originalLength;
     private List<InetAddress> addresses;  //all servers are on same port, so saving just this address
-    private int waitForServers = 1000 * 15; //the time that the client will wait for acks
+    private int waitForServers = 1000 * 30; //the time that the client will wait for acks
     private String answer = "Not Found"; //cant be local variable, needs to be field because used inside lambda of thread
 
 
@@ -38,15 +39,15 @@ public class Client {
 
     public String run() throws IOException, InterruptedException {
         Message msg = new Message(Message.ourTeamName, Message.discover, hash, originalLength, "", "");
-        socket.setBroadcast(true);
+        //socket.setBroadcast(true);
         byte[] broadcastBytes = msg.getBytes();
         DatagramPacket broadcastPacket = new DatagramPacket(broadcastBytes, broadcastBytes.length, addressBroadcast, serverPort);
         socket.send(broadcastPacket);
-        socket.setBroadcast(false);
+        //socket.setBroadcast(false);
         //now waiting for offers from servers
         List<DatagramPacket> packets = new LinkedList<>();
         try {
-            socket.setSoTimeout(1000);
+            socket.setSoTimeout(1000 * 10);
         } catch (SocketException e) {
             e.printStackTrace();
         }
@@ -65,7 +66,7 @@ public class Client {
             }
         });
         t.start();
-        t.join(1000);
+        t.join(1000 * 10);
         t.interrupt();
         for (DatagramPacket datagramPacket : packets) {
             byte[] data = datagramPacket.getData();
