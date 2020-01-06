@@ -8,8 +8,6 @@ import java. util. Scanner;
 
 public class main {
     public static void main(String[] args) throws IOException, InterruptedException {
-        test();
-
         Scanner in = new Scanner(System. in);
         System.out.println("Welcome to " + Message.ourTeamName +". Please enter the hash:");
         String hash = in.nextLine();
@@ -26,7 +24,7 @@ public class main {
     }
 
     public static void test() throws IOException, InterruptedException {
-        Server server = new Server();//create a server and running it
+        Server server = new Server(); //create a server and running it
         Thread serverThread = new Thread(server::run);
         serverThread.start();
         Client c = new Client("9017347a610d1436c1aaf52764e6578e8fc1a083", (byte)5);

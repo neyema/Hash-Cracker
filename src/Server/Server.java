@@ -8,6 +8,7 @@ import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutorService;
@@ -20,6 +21,8 @@ public class Server {
     private Mutex mutex;
     private boolean serverRunning;
     private Mutex mutexForRunFunctionToWait;//this mutex is to avoid busy waiting
+    private long bruteForceRuntime = 1000*10;  //10 sec for Yuval
+    private int serverRunTime = 1000 * 60 * 10;  //10 min for Yuval
 
     public Server() {
         try {
@@ -39,14 +42,21 @@ public class Server {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
+        try {
+            listeningSocket.setSoTimeout(serverRunTime);
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
         Thread t = new Thread(() -> {
             while (serverRunning) {
                 byte[] buf = new byte[1024];
                 DatagramPacket receivedPacket = new DatagramPacket(buf, 1024);
                 try {
                     listeningSocket.receive(receivedPacket);
-                } catch (IOException e) {
+                }
+                catch (SocketTimeoutException e) {
+                }
+                catch (IOException e) {
                     e.printStackTrace();
                 }
                 switch (receivedPacket.getData()[32]) {
@@ -76,7 +86,7 @@ public class Server {
         if (!result.equals("")) {//means that we found the HashKey
             sendAck(requestPacket, result);
         } else {
-            sendNack(requestPacket);
+            sendNack(requestPacket);  //send nack also in case runtime is over, because client is waiting for nack
         }
     }
 
@@ -104,7 +114,11 @@ public class Server {
     //function gets a range to find a hash key.
     //will return a string with the current key or will return empty string if not found
     private String tryDeHash(String startRange, String endRange, String originalHash){
+        long startTime = System.currentTimeMillis();
         for(String currentString = startRange; currentString.compareTo(endRange) <= 0 && !currentString.equals(""); currentString = incrementString(currentString)){
+            long currentTime = System.currentTimeMillis();
+            if (currentTime-startTime > bruteForceRuntime)
+                break;
             String hash = hash(currentString);
             if(originalHash.equals(hash)){
                 return currentString;
