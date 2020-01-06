@@ -82,7 +82,7 @@ public class Client {
         if (addresses.size() == 0)
             return answer;
         String[] stringsToCheck = divideToDomains(originalLength & 0xff, addresses.size());
-        for (int i = 0; i < stringsToCheck.length; i++) {
+        for (int i = 0; i < addresses.size(); i++) {
             InetAddress address = addresses.get(i);
             String start = stringsToCheck[2*i];
             String end = stringsToCheck[2*i+1];
