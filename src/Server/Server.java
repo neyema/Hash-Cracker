@@ -21,7 +21,7 @@ public class Server {
     private Mutex mutex;
     private boolean serverRunning;
     private Mutex mutexForRunFunctionToWait;//this mutex is to avoid busy waiting
-    private long bruteForceRuntime = 1000*10;  //10 sec for Yuval
+    private long bruteForceRuntime = 1000*30;  //10 sec for Yuval
     private int serverRunTime = 1000 * 60 * 10;  //10 min for Yuval
 
     public Server() {
