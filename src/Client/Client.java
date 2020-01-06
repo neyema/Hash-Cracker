@@ -43,7 +43,7 @@ public class Client {
         byte[] broadcastBytes = msg.getBytes();
         DatagramPacket broadcastPacket = new DatagramPacket(broadcastBytes, broadcastBytes.length, addressBroadcast, serverPort);
         socket.send(broadcastPacket);
-        //socket.setBroadcast(false);
+        socket.setBroadcast(false);
         //now waiting for offers from servers
         List<DatagramPacket> packets = new LinkedList<>();
         try {
@@ -82,10 +82,10 @@ public class Client {
         if (addresses.size() == 0)
             return answer;
         String[] stringsToCheck = divideToDomains(originalLength & 0xff, addresses.size());
-        for (int i = 0; i < stringsToCheck.length; i = i + 2) {
+        for (int i = 0; i < addresses.size(); i++) {
             InetAddress address = addresses.get(i);
-            String start = stringsToCheck[i];
-            String end = stringsToCheck[i + 1];
+            String start = stringsToCheck[2*i];
+            String end = stringsToCheck[2*i+1];
             Message requestMsg = new Message(Message.ourTeamName, Message.request, hash, originalLength, start, end);
             byte[] requestBytes = requestMsg.getBytes();
             DatagramPacket request = new DatagramPacket(requestBytes, requestBytes.length, address, serverPort);
