@@ -19,8 +19,8 @@ public class Message {
 
 
     public Message(String teamName,byte type, String hash, byte originalLength, String originalStringStart, String originalStringEnd) throws Exception {
-        if (teamName.length() > 32)
-            throw new Exception("team name more tahn 32 chars");
+      //  if (teamName.length() > 32)
+        //    throw new Exception("team name more then 32 chars");
         this.teamName = teamName;
         this.type = type;
         this.hash = hash;
