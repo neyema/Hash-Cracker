@@ -2,6 +2,7 @@ package Client;
 
 import SharedData.Message;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -9,26 +10,24 @@ import java.math.RoundingMode;
 import java.net.*;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
-
 import static java.lang.Thread.interrupted;
 
 public class Client {
     private final InetAddress addressBroadcast = InetAddress.getByName("255.255.255.255");
-    //private final InetAddress addressBroadcast = InetAddress.getByName("132.73.195.221");
+    private final InetAddress address = InetAddress.getByName("192.168.1.194");
     private final int serverPort = 3117;
     private final int bufferSize = 1024;
     private DatagramSocket socket;
     private String hash;  //hash length is 40 chars
     private byte originalLength;
     private List<InetAddress> addresses;  //all servers are on same port, so saving just this address
-    private int waitForServers = 1000 * 30; //the time that the client will wait for acks
+    private int waitForServers = 1000 * 60 ; //the time that the client will wait for acks
+    private int timeToReceive = 1000 * 30;  //30 sec
     private String answer = "Not Found"; //cant be local variable, needs to be field because used inside lambda of thread
-
 
     public Client(String hash, byte originalLength) throws UnknownHostException {
         try {
-            this.socket = new DatagramSocket(0);
+            this.socket = new DatagramSocket();
         } catch (SocketException e) {
             e.printStackTrace();
         }
@@ -37,17 +36,20 @@ public class Client {
         this.addresses = new LinkedList<>();
     }
 
-    public String run() throws IOException, InterruptedException {
-        Message msg = new Message(Message.ourTeamName, Message.discover, hash, originalLength, "", "");
+    public String run() throws Exception {
+        Message msg = new Message(Message.ourTeamName, Message.discover, hash, originalLength, "     ", "     ");
         //socket.setBroadcast(true);
+        socket.setBroadcast(true);
         byte[] broadcastBytes = msg.getBytes();
         DatagramPacket broadcastPacket = new DatagramPacket(broadcastBytes, broadcastBytes.length, addressBroadcast, serverPort);
+        //DatagramPacket broadcastPacket = new DatagramPacket(broadcastBytes, broadcastBytes.length, InetAddress.getLocalHost(), serverPort);
+        //broadcastPacket.setAddress(InetAddress.getByAddress(new byte[] {(byte)255, (byte)255, (byte)255, (byte)255}));
         socket.send(broadcastPacket);
-        socket.setBroadcast(false);
+        System.out.println("sent broadcast");
         //now waiting for offers from servers
         List<DatagramPacket> packets = new LinkedList<>();
         try {
-            socket.setSoTimeout(1000 * 10);
+            socket.setSoTimeout(timeToReceive);
         } catch (SocketException e) {
             e.printStackTrace();
         }
@@ -57,6 +59,7 @@ public class Client {
                 DatagramPacket receivedPacket = new DatagramPacket(buf, bufferSize);
                 try {
                     socket.receive(receivedPacket);
+                    System.out.println("received packet from: " + receivedPacket.getAddress().toString() +", port: "+receivedPacket.getPort());
                     packets.add(receivedPacket);
                 } catch (SocketTimeoutException e){
 
@@ -66,7 +69,7 @@ public class Client {
             }
         });
         t.start();
-        t.join(1000 * 10);
+        t.join(timeToReceive);
         t.interrupt();
         for (DatagramPacket datagramPacket : packets) {
             byte[] data = datagramPacket.getData();
@@ -74,9 +77,8 @@ public class Client {
                 addresses.add(datagramPacket.getAddress());
             }
         }
-
+        //socket.setBroadcast(false);
         //send requests to servers
-        socket = new DatagramSocket(0);//I'm not sure why, but if the socket not being initialized
         //so when it tries to listen, it gets stuck
         //seems like a dirty and ugly way to fix so need to see why it happens
         if (addresses.size() == 0)
@@ -90,6 +92,7 @@ public class Client {
             byte[] requestBytes = requestMsg.getBytes();
             DatagramPacket request = new DatagramPacket(requestBytes, requestBytes.length, address, serverPort);
             socket.send(request);
+            System.out.println("sent request to: " + request.getAddress().toString() +", port: "+request.getPort() );
         }
         socket.setSoTimeout(waitForServers);
         //wait for one ack/all nack
@@ -112,7 +115,6 @@ public class Client {
                     }
                 }
                 catch (SocketTimeoutException e){
-
                 }
                 catch (IOException e) {
                     e.printStackTrace();
@@ -153,7 +155,6 @@ public class Client {
             summer = summer.add(new BigDecimal(1));
             domains[i + 1] = converxtIntToString(summer.toBigInteger(), stringLength); //start domain of next server
         }
-
         return domains;
     }
 

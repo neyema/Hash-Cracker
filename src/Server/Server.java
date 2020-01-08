@@ -15,19 +15,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 public class Server {
-    private DatagramSocket listeningSocket;
-    private DatagramSocket sendingSocket;
+    private DatagramSocket serverSocket;
+    //private DatagramSocket sendingSocket;
     private ExecutorService calculatingThreadPool = new ScheduledThreadPoolExecutor(4);
     private Mutex mutex;
     private boolean serverRunning;
     private Mutex mutexForRunFunctionToWait;//this mutex is to avoid busy waiting
-    private long bruteForceRuntime = 1000*30;  //10 sec for Yuval
+    private long bruteForceRuntime = 1000 * 60 *2;  //2 min for Yuval
     private int serverRunTime = 1000 * 60 * 10;  //10 min for Yuval
 
     public Server() {
         try {
-            listeningSocket = new DatagramSocket(3117);//we listen on port 3117
-            sendingSocket = new DatagramSocket(0);//we don't mind sending on any socket
+            serverSocket = new DatagramSocket(3117);//we listen on port 3117
+            //sendingSocket = new DatagramSocket(0);//we don't mind sending on any socket
         } catch (SocketException e) {
             e.printStackTrace();
         }
@@ -43,7 +43,7 @@ public class Server {
             e.printStackTrace();
         }
         try {
-            listeningSocket.setSoTimeout(serverRunTime);
+            serverSocket.setSoTimeout(serverRunTime);
         } catch (SocketException e) {
             e.printStackTrace();
         }
@@ -52,21 +52,26 @@ public class Server {
                 byte[] buf = new byte[1024];
                 DatagramPacket receivedPacket = new DatagramPacket(buf, 1024);
                 try {
-                    listeningSocket.receive(receivedPacket);
+                    serverSocket.receive(receivedPacket);
                 }
                 catch (SocketTimeoutException e) {
+                    System.out.println("Timeout");
                 }
                 catch (IOException e) {
                     e.printStackTrace();
                 }
                 switch (receivedPacket.getData()[32]) {
                     case Message.discover://if it's a discover, we send to the client an offer message
+                        System.out.println ("got discover msg from: " +receivedPacket.getAddress().toString() +", port: "+receivedPacket.getPort() );
                         sendOfferMessage(receivedPacket);
                         break;
                     case Message.request://if it's a request, we make a new thread that try to brute force
+                        System.out.println ("got request msg from: " +receivedPacket.getAddress().toString() +", port: "+receivedPacket.getPort() );
                         calculatingThreadPool.execute(new Thread(() -> bruteForce(receivedPacket)));
+                        serverRunning = false;
                         break;
                     default://if it's something else we do nothing.
+                        System.out.println("bad msg");
                 }
             }
         });
@@ -85,6 +90,7 @@ public class Server {
         String result = tryDeHash(msg.getOriginalStringStart(), msg.getOriginalStringEnd(),msg.getHash());
         if (!result.equals("")) {//means that we found the HashKey
             sendAck(requestPacket, result);
+            System.out.println("sent ACK to: " +requestPacket.getAddress().toString() +", port: "+requestPacket.getPort() );
         } else {
             sendNack(requestPacket);  //send nack also in case runtime is over, because client is waiting for nack
         }
@@ -147,7 +153,7 @@ public class Server {
     private void sendPacket(DatagramPacket packet) {
         try {
             mutex.acquire();
-            sendingSocket.send(packet);
+            serverSocket.send(packet);
             mutex.release();
         } catch (Exception e) {
             e.printStackTrace();
@@ -159,6 +165,7 @@ public class Server {
         byte[] buffer = msg.getBytes();
         DatagramPacket offerPacket = new DatagramPacket(buffer, buffer.length, packet.getAddress(), packet.getPort());
         sendPacket(offerPacket);
+        System.out.println("sent offer to: " + offerPacket.getAddress().toString() + ", port: " + offerPacket.getPort());
     }
 
     private String incrementString(String str){

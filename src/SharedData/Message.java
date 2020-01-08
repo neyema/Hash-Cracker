@@ -1,5 +1,6 @@
 package SharedData;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class Message {
@@ -8,7 +9,7 @@ public class Message {
     public static final byte request = 3;
     public static final byte acknowledge = 4;
     public static final byte negative_acknowledge = 5;
-    public static final String ourTeamName = "       <insert-team-name>       ";
+    public static final String ourTeamName = "        insert team name        ";
     private String teamName;   //32 bytes.there can be other messages with other teamName
     private byte type;
     private String hash;  //hash length is 40 chars
@@ -17,7 +18,9 @@ public class Message {
     private String originalStringEnd;
 
 
-    public Message(String teamName,byte type, String hash, byte originalLength, String originalStringStart, String originalStringEnd) {
+    public Message(String teamName,byte type, String hash, byte originalLength, String originalStringStart, String originalStringEnd) throws Exception {
+        if (teamName.length() > 32)
+            throw new Exception("team name more tahn 32 chars");
         this.teamName = teamName;
         this.type = type;
         this.hash = hash;
@@ -77,7 +80,7 @@ public class Message {
         s += (char)originalLength;
         s += originalStringStart;
         s += originalStringEnd;
-        return s.getBytes();
+        return s.getBytes(StandardCharsets.UTF_8);
     }
 
 }
